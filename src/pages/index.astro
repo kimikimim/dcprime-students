@@ -96,6 +96,11 @@ import "../styles/global.css";
               <option value="">과목 전체</option>
               <option>국어</option><option>영어</option><option>수학</option><option>과학</option><option>탐독</option>
             </select>
+            <select id="sort-order" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand">
+              <option value="none">정렬: 기본</option>
+              <option value="grade-asc">학년 오름차순</option>
+              <option value="grade-desc">학년 내림차순</option>
+            </select>
             <input id="filter-search" type="text" placeholder="이름·학교·담당선생님 검색"
               class="flex-1 min-w-[160px] border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand" />
             <button id="filter-reset" class="text-xs text-gray-400 hover:text-gray-700 transition-colors px-2">초기화</button>
@@ -273,12 +278,15 @@ import "../styles/global.css";
         render();
       }
 
+      const GRADE_ORDER = ['초4', '초5', '초6', '중1', '중2', '중3', '고1', '고2', '고3', 'N수'];
+
       function getFiltered(): Student[] {
         const grade = $<HTMLSelectElement>('filter-grade').value;
         const subject = $<HTMLSelectElement>('filter-subject').value;
         const search = $<HTMLInputElement>('filter-search').value.trim().toLowerCase();
+        const sortOrder = $<HTMLSelectElement>('sort-order').value;
 
-        return allStudents.filter((s) => {
+        const filtered = allStudents.filter((s) => {
           if (grade && s.grade !== grade) return false;
           if (subject && !(s.subjects ?? []).includes(subject)) return false;
           if (search) {
@@ -287,6 +295,20 @@ import "../styles/global.css";
           }
           return true;
         });
+
+        if (sortOrder === 'grade-asc' || sortOrder === 'grade-desc') {
+          const dir = sortOrder === 'grade-asc' ? 1 : -1;
+          filtered.sort((a, b) => {
+            const ai = a.grade ? GRADE_ORDER.indexOf(a.grade) : -1;
+            const bi = b.grade ? GRADE_ORDER.indexOf(b.grade) : -1;
+            if (ai === -1 && bi === -1) return 0;
+            if (ai === -1) return 1;
+            if (bi === -1) return -1;
+            return (ai - bi) * dir;
+          });
+        }
+
+        return filtered;
       }
 
       function render() {
@@ -347,7 +369,7 @@ import "../styles/global.css";
         return div.innerHTML;
       }
 
-      ['filter-grade', 'filter-subject'].forEach((id) =>
+      ['filter-grade', 'filter-subject', 'sort-order'].forEach((id) =>
         $(id).addEventListener('change', render)
       );
       $('filter-search').addEventListener('input', render);
@@ -355,6 +377,7 @@ import "../styles/global.css";
         $<HTMLSelectElement>('filter-grade').value = '';
         $<HTMLSelectElement>('filter-subject').value = '';
         $<HTMLInputElement>('filter-search').value = '';
+        $<HTMLSelectElement>('sort-order').value = 'none';
         render();
       });
 
