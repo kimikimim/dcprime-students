@@ -1,0 +1,389 @@
+---
+import "../styles/global.css";
+---
+
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>재원생 관리 - 대치프라임 교직원</title>
+    <meta name="robots" content="noindex, nofollow" />
+  </head>
+  <body class="font-sans text-gray-800 bg-gray-100 min-h-screen">
+
+    <!-- 로그인 화면 -->
+    <div id="login-screen" class="flex items-center justify-center min-h-screen">
+      <div class="bg-white rounded-2xl shadow-lg p-10 w-full max-w-sm">
+        <h1 class="text-xl font-bold text-gray-900 mb-1 text-center">교직원 로그인</h1>
+        <p class="text-xs text-gray-400 mb-6 text-center">대치프라임 재원생 관리</p>
+        <input id="staff-pw" type="password" placeholder="비밀번호" class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm mb-3 focus:outline-none focus:border-brand" />
+        <p id="login-error" class="text-red-500 text-xs mb-3 hidden">비밀번호가 틀렸습니다.</p>
+        <button id="login-btn" class="w-full bg-brand text-white rounded-lg py-3 text-sm font-semibold hover:opacity-90 transition-opacity">로그인</button>
+      </div>
+    </div>
+
+    <!-- 재원생 관리 패널 -->
+    <div id="staff-panel" class="hidden">
+      <div class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+        <h1 class="text-lg font-bold text-gray-900">대치프라임 재원생 관리</h1>
+        <button id="logout-btn" class="text-sm text-gray-500 hover:text-gray-900 transition-colors">로그아웃</button>
+      </div>
+
+      <div class="max-w-4xl mx-auto px-4 py-8">
+
+        <!-- 등록/수정 폼 -->
+        <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+          <h2 id="form-title" class="text-base font-bold text-gray-900 mb-4">재원생 등록</h2>
+          <input type="hidden" id="edit-id" />
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">이름</label>
+              <input id="input-name" type="text" placeholder="홍길동" class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-brand" />
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">학교</label>
+              <input id="input-school" type="text" placeholder="OO중학교" class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-brand" />
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">학년</label>
+              <select id="input-grade" class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-brand">
+                <option value="">선택 안 함</option>
+                <option>초4</option><option>초5</option><option>초6</option>
+                <option>중1</option><option>중2</option><option>중3</option>
+                <option>고1</option><option>고2</option><option>고3</option>
+                <option>N수</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">담당 선생님</label>
+              <input id="input-teacher" type="text" list="teacher-suggestions" placeholder="담당 선생님 이름" class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-brand" />
+              <datalist id="teacher-suggestions"></datalist>
+            </div>
+          </div>
+          <div class="mb-4">
+            <label class="block text-xs text-gray-500 mb-2">수강 과목</label>
+            <div class="flex flex-wrap gap-4">
+              {['국어', '영어', '수학', '과학', '탐독'].map((s) => (
+                <label class="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
+                  <input type="checkbox" class="subject-checkbox w-4 h-4 accent-brand" value={s} /> {s}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <button id="submit-btn" class="bg-brand text-white rounded-lg px-6 py-2.5 text-sm font-semibold hover:opacity-90 transition-opacity">등록</button>
+            <button id="cancel-edit-btn" class="hidden border border-gray-300 text-gray-600 rounded-lg px-6 py-2.5 text-sm font-semibold hover:bg-gray-50 transition-colors">취소</button>
+            <p id="form-msg" class="text-sm text-gray-500 hidden"></p>
+          </div>
+        </div>
+
+        <!-- 필터 바 -->
+        <div class="bg-white rounded-2xl shadow-sm p-5 mb-4">
+          <div class="flex flex-wrap items-center gap-2">
+            <select id="filter-grade" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand">
+              <option value="">학년 전체</option>
+              <option>초4</option><option>초5</option><option>초6</option>
+              <option>중1</option><option>중2</option><option>중3</option>
+              <option>고1</option><option>고2</option><option>고3</option>
+              <option>N수</option>
+            </select>
+            <select id="filter-subject" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand">
+              <option value="">과목 전체</option>
+              <option>국어</option><option>영어</option><option>수학</option><option>과학</option><option>탐독</option>
+            </select>
+            <input id="filter-search" type="text" placeholder="이름·학교·담당선생님 검색"
+              class="flex-1 min-w-[160px] border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand" />
+            <button id="filter-reset" class="text-xs text-gray-400 hover:text-gray-700 transition-colors px-2">초기화</button>
+          </div>
+          <p id="result-count" class="text-xs text-gray-400 mt-3"></p>
+        </div>
+
+        <!-- 목록 (데스크톱: 표) -->
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden hidden sm:block">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-gray-100 text-left text-xs text-gray-400">
+                <th class="px-5 py-3 font-medium">이름</th>
+                <th class="px-5 py-3 font-medium">학교</th>
+                <th class="px-5 py-3 font-medium">학년</th>
+                <th class="px-5 py-3 font-medium">수강 과목</th>
+                <th class="px-5 py-3 font-medium">담당 선생님</th>
+                <th class="px-5 py-3 font-medium"></th>
+              </tr>
+            </thead>
+            <tbody id="student-table-body" class="divide-y divide-gray-100">
+              <tr><td colspan="6" class="px-5 py-8 text-center text-gray-400">불러오는 중...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 목록 (모바일: 카드) -->
+        <div id="student-card-list" class="sm:hidden space-y-3">
+          <p class="text-sm text-gray-400 py-4 text-center">불러오는 중...</p>
+        </div>
+
+      </div>
+    </div>
+
+    <script>
+      import { supabase } from '../lib/supabase';
+
+      const SESSION_KEY = 'staff_authed';
+
+      type Student = {
+        id: string;
+        name: string;
+        school: string | null;
+        grade: string | null;
+        subjects: string[] | null;
+        teacher: string | null;
+        created_at: string;
+      };
+
+      let allStudents: Student[] = [];
+
+      function $<T extends HTMLElement>(id: string): T {
+        return document.getElementById(id) as T;
+      }
+
+      // ── 로그인/로그아웃 ──
+      function showPanel() {
+        $('login-screen').classList.add('hidden');
+        $('staff-panel').classList.remove('hidden');
+        loadStudents();
+        loadTeacherSuggestions();
+      }
+
+      function showLogin() {
+        $('login-screen').classList.remove('hidden');
+        $('staff-panel').classList.add('hidden');
+      }
+
+      $('login-btn').addEventListener('click', async () => {
+        const btn = $<HTMLButtonElement>('login-btn');
+        const pw = $<HTMLInputElement>('staff-pw').value;
+        btn.disabled = true; btn.textContent = '확인 중...';
+        const { data, error } = await supabase.rpc('verify_staff_password', { pw });
+        btn.disabled = false; btn.textContent = '로그인';
+        if (!error && data === true) {
+          sessionStorage.setItem(SESSION_KEY, 'ok');
+          $('login-error').classList.add('hidden');
+          showPanel();
+        } else {
+          $('login-error').classList.remove('hidden');
+        }
+      });
+
+      $('staff-pw').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') $<HTMLButtonElement>('login-btn').click();
+      });
+
+      $('logout-btn').addEventListener('click', () => {
+        sessionStorage.removeItem(SESSION_KEY);
+        showLogin();
+      });
+
+      if (sessionStorage.getItem(SESSION_KEY) === 'ok') {
+        showPanel();
+      }
+
+      // ── 담당 선생님 자동완성 (강사소개 데이터 재사용) ──
+      async function loadTeacherSuggestions() {
+        const { data } = await supabase.from('faculty').select('name').order('name');
+        const datalist = $('teacher-suggestions');
+        datalist.innerHTML = '';
+        const names = Array.from(new Set((data ?? []).map((f: any) => f.name)));
+        for (const name of names) {
+          const opt = document.createElement('option');
+          opt.value = name;
+          datalist.appendChild(opt);
+        }
+      }
+
+      // ── 목록 로드/렌더 ──
+      async function loadStudents() {
+        const { data, error } = await supabase
+          .from('staff_students')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (error) {
+          console.error(error);
+          return;
+        }
+        allStudents = data ?? [];
+        render();
+      }
+
+      function getFiltered(): Student[] {
+        const grade = $<HTMLSelectElement>('filter-grade').value;
+        const subject = $<HTMLSelectElement>('filter-subject').value;
+        const search = $<HTMLInputElement>('filter-search').value.trim().toLowerCase();
+
+        return allStudents.filter((s) => {
+          if (grade && s.grade !== grade) return false;
+          if (subject && !(s.subjects ?? []).includes(subject)) return false;
+          if (search) {
+            const haystack = `${s.name} ${s.school ?? ''} ${s.teacher ?? ''}`.toLowerCase();
+            if (!haystack.includes(search)) return false;
+          }
+          return true;
+        });
+      }
+
+      function render() {
+        const list = getFiltered();
+        $('result-count').textContent = `총 ${list.length}명`;
+
+        const tbody = $('student-table-body');
+        const cardList = $('student-card-list');
+
+        if (list.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-8 text-center text-gray-400">등록된 재원생이 없습니다.</td></tr>`;
+          cardList.innerHTML = `<p class="text-sm text-gray-400 py-4 text-center">등록된 재원생이 없습니다.</p>`;
+          return;
+        }
+
+        tbody.innerHTML = list.map((s) => `
+          <tr class="hover:bg-gray-50">
+            <td class="px-5 py-3 font-medium text-gray-900">${escapeHtml(s.name)}</td>
+            <td class="px-5 py-3 text-gray-600">${escapeHtml(s.school ?? '-')}</td>
+            <td class="px-5 py-3 text-gray-600">${escapeHtml(s.grade ?? '-')}</td>
+            <td class="px-5 py-3 text-gray-600">${(s.subjects ?? []).map(escapeHtml).join(', ') || '-'}</td>
+            <td class="px-5 py-3 text-gray-600">${escapeHtml(s.teacher ?? '-')}</td>
+            <td class="px-5 py-3 text-right whitespace-nowrap">
+              <button data-id="${s.id}" class="edit-btn text-xs text-brand hover:opacity-70 mr-3">수정</button>
+              <button data-id="${s.id}" class="delete-btn text-xs text-red-400 hover:text-red-600">삭제</button>
+            </td>
+          </tr>
+        `).join('');
+
+        cardList.innerHTML = list.map((s) => `
+          <div class="bg-white rounded-xl shadow-sm p-4">
+            <div class="flex items-center justify-between mb-2">
+              <p class="font-bold text-gray-900">${escapeHtml(s.name)}</p>
+              <div class="flex gap-3">
+                <button data-id="${s.id}" class="edit-btn text-xs text-brand">수정</button>
+                <button data-id="${s.id}" class="delete-btn text-xs text-red-400">삭제</button>
+              </div>
+            </div>
+            <p class="text-xs text-gray-500">${escapeHtml(s.school ?? '학교 미입력')} · ${escapeHtml(s.grade ?? '학년 미입력')}</p>
+            <p class="text-xs text-gray-500 mt-1">수강 과목: ${(s.subjects ?? []).map(escapeHtml).join(', ') || '-'}</p>
+            <p class="text-xs text-gray-500 mt-1">담당 선생님: ${escapeHtml(s.teacher ?? '-')}</p>
+          </div>
+        `).join('');
+
+        document.querySelectorAll('.edit-btn').forEach((btn) =>
+          btn.addEventListener('click', () => startEdit((btn as HTMLElement).dataset.id!))
+        );
+        document.querySelectorAll('.delete-btn').forEach((btn) =>
+          btn.addEventListener('click', () => deleteStudent((btn as HTMLElement).dataset.id!))
+        );
+      }
+
+      function escapeHtml(str: string): string {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+      }
+
+      ['filter-grade', 'filter-subject'].forEach((id) =>
+        $(id).addEventListener('change', render)
+      );
+      $('filter-search').addEventListener('input', render);
+      $('filter-reset').addEventListener('click', () => {
+        $<HTMLSelectElement>('filter-grade').value = '';
+        $<HTMLSelectElement>('filter-subject').value = '';
+        $<HTMLInputElement>('filter-search').value = '';
+        render();
+      });
+
+      // ── 등록/수정 폼 ──
+      function resetForm() {
+        $('edit-id').setAttribute('value', '');
+        $<HTMLInputElement>('input-name').value = '';
+        $<HTMLInputElement>('input-school').value = '';
+        $<HTMLSelectElement>('input-grade').value = '';
+        $<HTMLInputElement>('input-teacher').value = '';
+        document.querySelectorAll<HTMLInputElement>('.subject-checkbox').forEach((cb) => (cb.checked = false));
+        $('form-title').textContent = '재원생 등록';
+        $('submit-btn').textContent = '등록';
+        $('cancel-edit-btn').classList.add('hidden');
+      }
+
+      function startEdit(id: string) {
+        const s = allStudents.find((x) => x.id === id);
+        if (!s) return;
+        $('edit-id').setAttribute('value', s.id);
+        $<HTMLInputElement>('input-name').value = s.name;
+        $<HTMLInputElement>('input-school').value = s.school ?? '';
+        $<HTMLSelectElement>('input-grade').value = s.grade ?? '';
+        $<HTMLInputElement>('input-teacher').value = s.teacher ?? '';
+        const subjects = s.subjects ?? [];
+        document.querySelectorAll<HTMLInputElement>('.subject-checkbox').forEach((cb) => {
+          cb.checked = subjects.includes(cb.value);
+        });
+        $('form-title').textContent = '재원생 정보 수정';
+        $('submit-btn').textContent = '수정 완료';
+        $('cancel-edit-btn').classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      $('cancel-edit-btn').addEventListener('click', resetForm);
+
+      $('submit-btn').addEventListener('click', async () => {
+        const id = $('edit-id').getAttribute('value');
+        const name = $<HTMLInputElement>('input-name').value.trim();
+        const msg = $('form-msg');
+
+        if (!name) {
+          msg.textContent = '이름을 입력해주세요.';
+          msg.classList.remove('hidden');
+          return;
+        }
+
+        const payload = {
+          name,
+          school: $<HTMLInputElement>('input-school').value.trim() || null,
+          grade: $<HTMLSelectElement>('input-grade').value || null,
+          teacher: $<HTMLInputElement>('input-teacher').value.trim() || null,
+          subjects: Array.from(document.querySelectorAll<HTMLInputElement>('.subject-checkbox'))
+            .filter((cb) => cb.checked)
+            .map((cb) => cb.value),
+        };
+
+        const btn = $<HTMLButtonElement>('submit-btn');
+        btn.disabled = true;
+
+        const { error } = id
+          ? await supabase.from('staff_students').update(payload).eq('id', id)
+          : await supabase.from('staff_students').insert(payload);
+
+        btn.disabled = false;
+
+        if (error) {
+          msg.textContent = '저장에 실패했습니다: ' + error.message;
+          msg.classList.remove('hidden');
+          return;
+        }
+
+        msg.classList.add('hidden');
+        resetForm();
+        loadStudents();
+        loadTeacherSuggestions();
+      });
+
+      async function deleteStudent(id: string) {
+        if (!confirm('이 재원생 정보를 삭제할까요?')) return;
+        const { error } = await supabase.from('staff_students').delete().eq('id', id);
+        if (error) {
+          alert('삭제에 실패했습니다: ' + error.message);
+          return;
+        }
+        loadStudents();
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+@theme {
+  /* 브랜드 컬러 (대치프라임 로고 기반 슬레이트 퍼플) */
+  --color-brand: #747ba2;
+  --color-brand-dark: #565d82;
+  --color-brand-light: #f0f1f7;
+
+  /* 폰트 */
+  --font-sans: "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
+}
