@@ -7,7 +7,7 @@
 
 -- ────────────────────────────────────────────
 -- 1. 교직원 로그인 설정 테이블 + 역할별 비밀번호 검증 함수
---    일반교직원 비밀번호: 2869 (조회만 가능)
+--    일반교직원 비밀번호: 5301 (조회만 가능)
 --    관리자 비밀번호: 1250 (추가/수정/삭제 가능)
 -- ────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS staff_config (
@@ -18,7 +18,7 @@ ALTER TABLE staff_config ENABLE ROW LEVEL SECURITY;
 -- 정책 없음 = anon 직접 조회 불가
 
 INSERT INTO staff_config (key, value) VALUES
-  ('staff_password', '2869'),
+  ('staff_password', '5301'),
   ('admin_password', '1250')
 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 
