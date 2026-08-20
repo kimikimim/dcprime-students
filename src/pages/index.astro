@@ -49,21 +49,20 @@ import "../styles/global.css";
               <input id="input-school" type="text" placeholder="OO중학교" class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-brand" />
             </div>
           </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-            <div>
-              <label class="block text-xs text-gray-500 mb-1">학년</label>
-              <select id="input-grade" class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-brand">
-                <option value="">선택 안 함</option>
-                <option>초4</option><option>초5</option><option>초6</option>
-                <option>중1</option><option>중2</option><option>중3</option>
-                <option>고1</option><option>고2</option><option>고3</option>
-                <option>N수</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs text-gray-500 mb-1">담당 선생님</label>
-              <input id="input-teacher" type="text" list="teacher-suggestions" placeholder="담당 선생님 이름" class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-brand" />
-              <datalist id="teacher-suggestions"></datalist>
+          <div class="mb-3">
+            <label class="block text-xs text-gray-500 mb-1">학년</label>
+            <select id="input-grade" class="w-full sm:w-1/2 border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-brand">
+              <option value="">선택 안 함</option>
+              <option>초4</option><option>초5</option><option>초6</option>
+              <option>중1</option><option>중2</option><option>중3</option>
+              <option>고1</option><option>고2</option><option>고3</option>
+              <option>N수</option>
+            </select>
+          </div>
+          <div class="mb-4">
+            <label class="block text-xs text-gray-500 mb-2">담당 선생님 (여러 명 선택 가능)</label>
+            <div id="teacher-toggle-list" class="flex flex-wrap gap-2">
+              <p class="text-xs text-gray-400">불러오는 중...</p>
             </div>
           </div>
           <div class="mb-4">
@@ -215,17 +214,49 @@ import "../styles/global.css";
         showPanel();
       }
 
-      // ── 담당 선생님 자동완성 (강사소개 데이터 재사용) ──
+      // ── 담당 선생님 토글 (강사소개 데이터 재사용) ──
+      const TEACHER_ACTIVE = ['bg-brand', 'text-white', 'border-brand'];
+      const TEACHER_INACTIVE = ['bg-gray-50', 'text-gray-600', 'border-gray-300'];
+
       async function loadTeacherSuggestions() {
         const { data } = await supabase.from('faculty').select('name').order('name');
-        const datalist = $('teacher-suggestions');
-        datalist.innerHTML = '';
+        const container = $('teacher-toggle-list');
         const names = Array.from(new Set((data ?? []).map((f: any) => f.name)));
-        for (const name of names) {
-          const opt = document.createElement('option');
-          opt.value = name;
-          datalist.appendChild(opt);
+
+        if (names.length === 0) {
+          container.innerHTML = '<p class="text-xs text-gray-400">강사소개에 등록된 선생님이 없습니다.</p>';
+          return;
         }
+
+        container.innerHTML = names.map((name) => `
+          <button type="button" data-name="${escapeHtml(name)}" data-selected="false"
+            class="teacher-toggle px-3 py-1.5 rounded-full text-sm border transition-colors ${TEACHER_INACTIVE.join(' ')}">
+            ${escapeHtml(name)}
+          </button>
+        `).join('');
+
+        container.querySelectorAll<HTMLButtonElement>('.teacher-toggle').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const selected = btn.dataset.selected === 'true';
+            btn.dataset.selected = selected ? 'false' : 'true';
+            btn.classList.remove(...TEACHER_ACTIVE, ...TEACHER_INACTIVE);
+            btn.classList.add(...(selected ? TEACHER_INACTIVE : TEACHER_ACTIVE));
+          });
+        });
+      }
+
+      function getSelectedTeachers(): string[] {
+        return Array.from(document.querySelectorAll<HTMLButtonElement>('.teacher-toggle[data-selected="true"]'))
+          .map((btn) => btn.dataset.name!);
+      }
+
+      function setSelectedTeachers(names: string[]) {
+        document.querySelectorAll<HTMLButtonElement>('.teacher-toggle').forEach((btn) => {
+          const active = names.includes(btn.dataset.name!);
+          btn.dataset.selected = active ? 'true' : 'false';
+          btn.classList.remove(...TEACHER_ACTIVE, ...TEACHER_INACTIVE);
+          btn.classList.add(...(active ? TEACHER_ACTIVE : TEACHER_INACTIVE));
+        });
       }
 
       // ── 목록 로드/렌더 ──
@@ -333,7 +364,7 @@ import "../styles/global.css";
         $<HTMLInputElement>('input-name').value = '';
         $<HTMLInputElement>('input-school').value = '';
         $<HTMLSelectElement>('input-grade').value = '';
-        $<HTMLInputElement>('input-teacher').value = '';
+        setSelectedTeachers([]);
         document.querySelectorAll<HTMLInputElement>('.subject-checkbox').forEach((cb) => (cb.checked = false));
         $('form-title').textContent = '재원생 등록';
         $('submit-btn').textContent = '등록';
@@ -347,7 +378,7 @@ import "../styles/global.css";
         $<HTMLInputElement>('input-name').value = s.name;
         $<HTMLInputElement>('input-school').value = s.school ?? '';
         $<HTMLSelectElement>('input-grade').value = s.grade ?? '';
-        $<HTMLInputElement>('input-teacher').value = s.teacher ?? '';
+        setSelectedTeachers((s.teacher ?? '').split(',').map((t) => t.trim()).filter(Boolean));
         const subjects = s.subjects ?? [];
         document.querySelectorAll<HTMLInputElement>('.subject-checkbox').forEach((cb) => {
           cb.checked = subjects.includes(cb.value);
@@ -376,7 +407,7 @@ import "../styles/global.css";
           name,
           school: $<HTMLInputElement>('input-school').value.trim() || null,
           grade: $<HTMLSelectElement>('input-grade').value || null,
-          teacher: $<HTMLInputElement>('input-teacher').value.trim() || null,
+          teacher: getSelectedTeachers().join(', ') || null,
           subjects: Array.from(document.querySelectorAll<HTMLInputElement>('.subject-checkbox'))
             .filter((cb) => cb.checked)
             .map((cb) => cb.value),
