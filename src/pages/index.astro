@@ -26,14 +26,17 @@ import "../styles/global.css";
     <!-- 재원생 관리 패널 -->
     <div id="staff-panel" class="hidden">
       <div class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <h1 class="text-lg font-bold text-gray-900">대치프라임 재원생 관리</h1>
+        <div class="flex items-center gap-2">
+          <h1 class="text-lg font-bold text-gray-900">대치프라임 재원생 관리</h1>
+          <span id="role-badge" class="text-xs font-semibold px-2 py-1 rounded-full bg-brand-light text-brand"></span>
+        </div>
         <button id="logout-btn" class="text-sm text-gray-500 hover:text-gray-900 transition-colors">로그아웃</button>
       </div>
 
       <div class="max-w-4xl mx-auto px-4 py-8">
 
-        <!-- 등록/수정 폼 -->
-        <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+        <!-- 등록/수정 폼 (관리자 전용) -->
+        <div id="student-form-card" class="bg-white rounded-2xl shadow-sm p-6 mb-6">
           <h2 id="form-title" class="text-base font-bold text-gray-900 mb-4">재원생 등록</h2>
           <input type="hidden" id="edit-id" />
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
@@ -132,6 +135,18 @@ import "../styles/global.css";
       import { supabase } from '../lib/supabase';
 
       const SESSION_KEY = 'staff_authed';
+      const ROLE_KEY = 'staff_role';
+
+      type Role = 'admin' | 'staff';
+
+      function getRole(): Role | null {
+        const r = sessionStorage.getItem(ROLE_KEY);
+        return r === 'admin' || r === 'staff' ? r : null;
+      }
+
+      function isAdmin(): boolean {
+        return getRole() === 'admin';
+      }
 
       type Student = {
         id: string;
@@ -150,9 +165,17 @@ import "../styles/global.css";
       }
 
       // ── 로그인/로그아웃 ──
+      function applyRoleUI() {
+        const admin = isAdmin();
+        $('student-form-card').classList.toggle('hidden', !admin);
+        const badge = $('role-badge');
+        badge.textContent = admin ? '관리자' : '일반교직원';
+      }
+
       function showPanel() {
         $('login-screen').classList.add('hidden');
         $('staff-panel').classList.remove('hidden');
+        applyRoleUI();
         loadStudents();
         loadTeacherSuggestions();
       }
@@ -166,10 +189,11 @@ import "../styles/global.css";
         const btn = $<HTMLButtonElement>('login-btn');
         const pw = $<HTMLInputElement>('staff-pw').value;
         btn.disabled = true; btn.textContent = '확인 중...';
-        const { data, error } = await supabase.rpc('verify_staff_password', { pw });
+        const { data, error } = await supabase.rpc('verify_staff_login', { pw });
         btn.disabled = false; btn.textContent = '로그인';
-        if (!error && data === true) {
+        if (!error && (data === 'admin' || data === 'staff')) {
           sessionStorage.setItem(SESSION_KEY, 'ok');
+          sessionStorage.setItem(ROLE_KEY, data);
           $('login-error').classList.add('hidden');
           showPanel();
         } else {
@@ -183,10 +207,11 @@ import "../styles/global.css";
 
       $('logout-btn').addEventListener('click', () => {
         sessionStorage.removeItem(SESSION_KEY);
+        sessionStorage.removeItem(ROLE_KEY);
         showLogin();
       });
 
-      if (sessionStorage.getItem(SESSION_KEY) === 'ok') {
+      if (sessionStorage.getItem(SESSION_KEY) === 'ok' && getRole()) {
         showPanel();
       }
 
@@ -246,6 +271,12 @@ import "../styles/global.css";
           return;
         }
 
+        const admin = isAdmin();
+        const actions = (id: string) => admin
+          ? `<button data-id="${id}" class="edit-btn text-xs text-brand hover:opacity-70 mr-3">수정</button>
+             <button data-id="${id}" class="delete-btn text-xs text-red-400 hover:text-red-600">삭제</button>`
+          : '';
+
         tbody.innerHTML = list.map((s) => `
           <tr class="hover:bg-gray-50">
             <td class="px-5 py-3 font-medium text-gray-900">${escapeHtml(s.name)}</td>
@@ -253,10 +284,7 @@ import "../styles/global.css";
             <td class="px-5 py-3 text-gray-600">${escapeHtml(s.grade ?? '-')}</td>
             <td class="px-5 py-3 text-gray-600">${(s.subjects ?? []).map(escapeHtml).join(', ') || '-'}</td>
             <td class="px-5 py-3 text-gray-600">${escapeHtml(s.teacher ?? '-')}</td>
-            <td class="px-5 py-3 text-right whitespace-nowrap">
-              <button data-id="${s.id}" class="edit-btn text-xs text-brand hover:opacity-70 mr-3">수정</button>
-              <button data-id="${s.id}" class="delete-btn text-xs text-red-400 hover:text-red-600">삭제</button>
-            </td>
+            <td class="px-5 py-3 text-right whitespace-nowrap">${actions(s.id)}</td>
           </tr>
         `).join('');
 
@@ -264,10 +292,7 @@ import "../styles/global.css";
           <div class="bg-white rounded-xl shadow-sm p-4">
             <div class="flex items-center justify-between mb-2">
               <p class="font-bold text-gray-900">${escapeHtml(s.name)}</p>
-              <div class="flex gap-3">
-                <button data-id="${s.id}" class="edit-btn text-xs text-brand">수정</button>
-                <button data-id="${s.id}" class="delete-btn text-xs text-red-400">삭제</button>
-              </div>
+              <div class="flex gap-3">${actions(s.id)}</div>
             </div>
             <p class="text-xs text-gray-500">${escapeHtml(s.school ?? '학교 미입력')} · ${escapeHtml(s.grade ?? '학년 미입력')}</p>
             <p class="text-xs text-gray-500 mt-1">수강 과목: ${(s.subjects ?? []).map(escapeHtml).join(', ') || '-'}</p>
@@ -275,12 +300,14 @@ import "../styles/global.css";
           </div>
         `).join('');
 
-        document.querySelectorAll('.edit-btn').forEach((btn) =>
-          btn.addEventListener('click', () => startEdit((btn as HTMLElement).dataset.id!))
-        );
-        document.querySelectorAll('.delete-btn').forEach((btn) =>
-          btn.addEventListener('click', () => deleteStudent((btn as HTMLElement).dataset.id!))
-        );
+        if (admin) {
+          document.querySelectorAll('.edit-btn').forEach((btn) =>
+            btn.addEventListener('click', () => startEdit((btn as HTMLElement).dataset.id!))
+          );
+          document.querySelectorAll('.delete-btn').forEach((btn) =>
+            btn.addEventListener('click', () => deleteStudent((btn as HTMLElement).dataset.id!))
+          );
+        }
       }
 
       function escapeHtml(str: string): string {
@@ -334,6 +361,7 @@ import "../styles/global.css";
       $('cancel-edit-btn').addEventListener('click', resetForm);
 
       $('submit-btn').addEventListener('click', async () => {
+        if (!isAdmin()) return;
         const id = $('edit-id').getAttribute('value');
         const name = $<HTMLInputElement>('input-name').value.trim();
         const msg = $('form-msg');
@@ -376,6 +404,7 @@ import "../styles/global.css";
       });
 
       async function deleteStudent(id: string) {
+        if (!isAdmin()) return;
         if (!confirm('이 재원생 정보를 삭제할까요?')) return;
         const { error } = await supabase.from('staff_students').delete().eq('id', id);
         if (error) {
